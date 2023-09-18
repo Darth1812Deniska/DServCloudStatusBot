@@ -1,6 +1,10 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using DServCloudStatusCommonClasses;
+using Microsoft.Extensions.Configuration;
 
-var configuration = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json")
+
+var configuration = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json")
     .Build();
 
 var settings = configuration.GetSection("settings");
@@ -9,4 +13,10 @@ if (string.IsNullOrEmpty(botToken))
 {
     return;
 }
+
+TelegramStatusChecker statusChecker = new TelegramStatusChecker(botToken);
+
+
 Console.WriteLine(botToken);
+Console.ReadLine();
+
