@@ -10,6 +10,7 @@ namespace DServCloudStatusCommonClasses
     {
         public int Id { get; set; }
         public string Name { get; set; }
+        public int ChatId { get; set; }
         public bool IsAdmin { get; set; }
         public BotUser() { }
     }

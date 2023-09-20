@@ -1,4 +1,6 @@
-﻿using Telegram.Bot;
+﻿using System;
+using NLog;
+using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -8,6 +10,7 @@ namespace DServCloudStatusCommonClasses
     public class TelegramStatusChecker
     {
         private readonly TelegramBotClient _telegramBotClient;
+        private Logger Logger => LogManager.GetCurrentClassLogger();
 
         public TelegramStatusChecker(string botToken)
         {
@@ -16,9 +19,10 @@ namespace DServCloudStatusCommonClasses
             var cancellationToken = cts.Token;
             var receiverOptions = new ReceiverOptions
             {
-                AllowedUpdates ={} , // разрешено получать все виды апдейтов
+                AllowedUpdates = { }, // разрешено получать все виды апдейтов
             };
             _telegramBotClient.StartReceiving(HandleUpdateAsync, HandleErrorAsync, receiverOptions, cancellationToken);
+            Logger.Info("Запущено");
         }
 
         private TelegramBotClient TelegramBotClient => _telegramBotClient;
@@ -39,25 +43,93 @@ namespace DServCloudStatusCommonClasses
             CancellationToken cancellationToken
         )
         {
-            //Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(update));
-
-            // Тут бот получает сообщения от пользователя
-            // Дальше код отвечает за команду старт, которую можно добавить через botfather
-            // Если все хорошо при запуске program.cs в консоль выведется, что бот запущен
-            // а при отправке команды бот напишет Привет
-
-            var message = update.Message;
-            if (message != null && message.Text != null)
+            UpdateType updateType = update.Type;
+            Chat chat;
+            if (update.Message != null)
             {
-                string messageText = message.Text;
-                Console.WriteLine(messageText);
+                chat = update.Message.Chat;
+                Logger.Info($"{updateType} - {chat.Id}");
+            }
+            else
+            {
+                return;
             }
 
-
-            if (update.Type == UpdateType.CallbackQuery)
+            if (updateType == UpdateType.Message)
             {
-                // Тут получает нажатия на inline кнопки
+                var message = update.Message;
+                if (message != null && message.Text != null)
+                {
+                    string messageText = message.Text;
+                    Logger.Info($"{updateType} - {messageText}");
+                    switch (messageText)
+                    {
+                        case @"/start":
+                            await TelegramBotClient.SendTextMessageAsync(chat.Id, $"Добро пожаловать! Бот запущен");
+                            break;
+                        case @"/server_restart":
+                            await TelegramBotClient.SendTextMessageAsync(chat.Id, $"Команда на перезапуск обработана");
+                            await ServerRestartAsync(message);
+                            break;
+                        case @"/router_restart":
+                            await TelegramBotClient.SendTextMessageAsync(chat.Id,
+                                $"Команда на перезапуск роутера обработана");
+                            await RouterRestartAsync(message);
+                            break;
+                        case @"/status":
+                            await TelegramBotClient.SendTextMessageAsync(chat.Id, $"Сервис работает");
+                            await SendServerStatusAsync(message);
+                            break;
+                        case @"/ip_status":
+                            await TelegramBotClient.SendTextMessageAsync(chat.Id, $"Команда на пинг IP обработана");
+                            await SendIpStatusAsync(message);
+                            break;
+                        default:
+                            await TelegramBotClient.SendTextMessageAsync(chat.Id, $"Команда не поддерживается");
+                            break;
+                    }
+                }
             }
+        }
+
+        private async Task ServerRestartAsync(Message message)
+        {
+            User? fromUser = message.From;
+            Chat chat = message.Chat;
+            if (fromUser==null)
+                return;
+            long userId = fromUser.Id;
+            await TelegramBotClient.SendTextMessageAsync(chat.Id, $"{userId}");
+        }
+
+        private async Task RouterRestartAsync(Message message)
+        {
+            User? fromUser = message.From;
+            Chat chat = message.Chat;
+            if (fromUser == null)
+                return;
+            long userId = fromUser.Id;
+            await TelegramBotClient.SendTextMessageAsync(chat.Id, $"{userId}");
+        }
+
+        private async Task SendServerStatusAsync(Message message)
+        {
+            User? fromUser = message.From;
+            Chat chat = message.Chat;
+            if (fromUser == null)
+                return;
+            long userId = fromUser.Id;
+            await TelegramBotClient.SendTextMessageAsync(chat.Id, $"{userId}");
+        }
+
+        private async Task SendIpStatusAsync(Message message)
+        {
+            User? fromUser = message.From;
+            Chat chat = message.Chat;
+            if (fromUser == null)
+                return;
+            long userId = fromUser.Id;
+            await TelegramBotClient.SendTextMessageAsync(chat.Id, $"{userId}");
         }
     }
 }
