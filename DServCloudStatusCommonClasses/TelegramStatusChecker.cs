@@ -8,6 +8,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using System.Net.Sockets;
 using System.Linq;
+using System.Diagnostics;
 
 namespace DServCloudStatusCommonClasses
 {
@@ -17,8 +18,11 @@ namespace DServCloudStatusCommonClasses
         private readonly string _adminUserName;
         private readonly string _serverIpAddressString;
         private readonly int[] _portsToCheck;
+        private readonly BotSettings _botSettings;
         private TelegramBotClient TelegramBotClient => _telegramBotClient;
         private Logger Logger => LogManager.GetCurrentClassLogger();
+
+        private BotSettings BotSettings => _botSettings;
 
         private string AdminUserName => _adminUserName;
 
@@ -26,28 +30,27 @@ namespace DServCloudStatusCommonClasses
 
         private int[] PortsToCheck => _portsToCheck;
 
-        public TelegramStatusChecker(string botToken, string adminUserName, string serverIpAddressString,
-            int[] portsToCheck)
+        public TelegramStatusChecker(BotSettings botSettings)
         {
-            _adminUserName = adminUserName;
+            _botSettings = botSettings;
+            _adminUserName = BotSettings.AdminUserName;
             Logger.Info($"Задано имя администратора: AdminUserName = \"{AdminUserName}\"");
-            _serverIpAddressString = serverIpAddressString;
+            _serverIpAddressString = BotSettings.ServerIpAddress;
             Logger.Info($"Задан внешний IP: ServerIpAddressString = \"{ServerIpAddressString}\"");
-            _portsToCheck = portsToCheck;
+            _portsToCheck = BotSettings.PortsToCheck;
             string.Join(",", PortsToCheck);
             Logger.Info($"Указаны следующие порты для проверки: PortsToCheck = \"{string.Join(",", PortsToCheck)}\"");
-            _telegramBotClient = new TelegramBotClient(botToken);
+
+            _telegramBotClient = new TelegramBotClient(BotSettings.BotToken);
             var cts = new CancellationTokenSource();
             var cancellationToken = cts.Token;
             var receiverOptions = new ReceiverOptions
             {
                 AllowedUpdates = { }, // разрешено получать все виды апдейтов
             };
-            _telegramBotClient.StartReceiving(HandleUpdateAsync, HandleErrorAsync, receiverOptions, cancellationToken);
+             _telegramBotClient.StartReceiving(HandleUpdateAsync, HandleErrorAsync, receiverOptions, cancellationToken);
             Logger.Info("Бот запущен!");
         }
-
-        
 
         private async Task HandleErrorAsync(
             ITelegramBotClient botClient,
@@ -93,6 +96,12 @@ namespace DServCloudStatusCommonClasses
                                 cancellationToken: cancellationToken);
                             await ServerRestartAsync(message);
                             break;
+                        case @"/server_restart_confirm":
+                            await ServerRestartConfirmAsync(message);
+                            break;
+                        case @"/server_restart_cancel":
+                            await ServerRestartCancelAsync(message);
+                            break;
                         case @"/router_restart":
                             await TelegramBotClient.SendTextMessageAsync(chat.Id,
                                 $"Команда на перезапуск роутера обработана", cancellationToken: cancellationToken);
@@ -119,6 +128,63 @@ namespace DServCloudStatusCommonClasses
 
         private async Task ServerRestartAsync(Message message)
         {
+            Logger.Info($"ServerRestartAsync. Запрошен перезапуск сервера");
+            var chat = message.Chat;
+            if (chat == null)
+            {
+                Logger.Info($"ServerRestartAsync. Не получен chat. Не перезапускается");
+                return;
+            }
+
+            var user = message.From;
+            if (user == null)
+            {
+                Logger.Info($"ServerRestartAsync. Не указан пользователь. не перезапускается");
+                return;
+            }
+
+            string username = user.Username;
+            if (username != AdminUserName)
+            {
+                Logger.Info($"ServerRestartAsync. Перезапуск запрошен не администратором - не перезапускается");
+                return;
+            }
+
+            Logger.Info($"ServerRestartAsync. Перезапуск запрошен администратором - перезапускается");
+            await TelegramBotClient.SendTextMessageAsync(chat.Id,
+                @"Запрошена перезагрузка сервера. 
+Для перезапуска нажми: /server_restart_confirm, для отмены: /server_restart_cancel");
+            
+        }
+
+        private async Task ServerRestartConfirmAsync(Message message)
+        {
+            Chat chat = message.Chat;
+            Logger.Info($"ServerRestartConfirm. Перезапуск подтвержден администратором");
+            await TelegramBotClient.SendTextMessageAsync(chat.Id, "Перезапуск подтвержден администратором");
+            Restart();
+        }
+
+        private void Restart()
+        {
+            Logger.Info($"Restart. Перезапуск через 30 секунд");
+            StartShutDown("-f -r -t 30");
+        }
+
+        private static void StartShutDown(string param)
+        {
+            ProcessStartInfo proc = new ProcessStartInfo();
+            proc.FileName = "cmd";
+            proc.WindowStyle = ProcessWindowStyle.Hidden;
+            proc.Arguments = "/C shutdown " + param;
+            Process.Start(proc);
+        }
+
+        private async Task ServerRestartCancelAsync(Message message)
+        {
+            Chat chat = message.Chat;
+            Logger.Info($"ServerRestartConfirm. отменен администратором");
+            await TelegramBotClient.SendTextMessageAsync(chat.Id, "Перезапуск отменен администратором");
         }
 
         private async Task RouterRestartAsync(Message message)
@@ -152,10 +218,11 @@ namespace DServCloudStatusCommonClasses
                 else
                 {
                     Logger.Info($"SendIpStatusAsync. {ServerIpAddressString}:{port} - недоступен");
-                    await TelegramBotClient.SendTextMessageAsync(chat.Id, $"{ServerIpAddressString}:{port} - недоступен");
+                    await TelegramBotClient.SendTextMessageAsync(chat.Id,
+                        $"{ServerIpAddressString}:{port} - недоступен");
                 }
             }
-            
+
             /*Ping pingSender = new Ping();
 
             IPAddress serverIpAddress = IPAddress.Parse(ServerIpAddressString);

@@ -6,19 +6,20 @@ var configuration = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json")
     .Build();
-
-IConfigurationSection settings = configuration.GetSection("settings");
-string botToken = settings["bot_token"] ?? string.Empty;
-string adminUserName = settings["admin_user_name"] ?? string.Empty;
-string serverIpAddress = settings["server_ip_address"] ?? string.Empty;
-var portToCheck = settings.GetSection("ports_to_check").Get<int[]>();
-
-if (string.IsNullOrEmpty(botToken))
+if (configuration==null)
+    return;
+BotSettings botSettings = configuration.GetSection("BotSettings").Get<BotSettings>();
+if (botSettings == null)
 {
     return;
 }
 
-TelegramStatusChecker statusChecker = new TelegramStatusChecker(botToken, adminUserName, serverIpAddress, portToCheck);
+if (string.IsNullOrEmpty(botSettings.BotToken))
+{
+    return;
+}
+
+TelegramStatusChecker statusChecker = new TelegramStatusChecker(botSettings);
 
 Console.ReadLine();
 
