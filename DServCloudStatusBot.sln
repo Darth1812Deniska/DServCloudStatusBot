@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.7.34009.444
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DServCloudStatusBotConsole", "DServCloudStatusBot\DServCloudStatusBotConsole.csproj", "{1BA5E637-7D48-48C5-9957-292D43870D23}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DServCloudStatusBotConsole", "DServCloudStatusBot\DServCloudStatusBotConsole.csproj", "{1BA5E637-7D48-48C5-9957-292D43870D23}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DServCloudStatusBotService", "DServCloudStatusBotService\DServCloudStatusBotService.csproj", "{5AEF99B9-F047-4B86-B7B1-F6CABAB0B408}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DServCloudStatusBotService", "DServCloudStatusBotService\DServCloudStatusBotService.csproj", "{5AEF99B9-F047-4B86-B7B1-F6CABAB0B408}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DServCloudStatusCommonClasses", "DServCloudStatusCommonClasses\DServCloudStatusCommonClasses.csproj", "{6C1F9FAB-C83A-4849-AB08-1FAF28284021}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{5AEF99B9-F047-4B86-B7B1-F6CABAB0B408}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5AEF99B9-F047-4B86-B7B1-F6CABAB0B408}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5AEF99B9-F047-4B86-B7B1-F6CABAB0B408}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6C1F9FAB-C83A-4849-AB08-1FAF28284021}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C1F9FAB-C83A-4849-AB08-1FAF28284021}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C1F9FAB-C83A-4849-AB08-1FAF28284021}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C1F9FAB-C83A-4849-AB08-1FAF28284021}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
