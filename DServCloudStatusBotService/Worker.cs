@@ -24,14 +24,14 @@ namespace DServCloudStatusBotService
         
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
-            
-        }
-        /*
-        public override Task StopAsync(CancellationToken cancellationToken)
-        {
-            
+            await TelegramStatusChecker.SendMessageToAdminAsync("Сервис запущен");
         }
         
+        public override async Task StopAsync(CancellationToken cancellationToken)
+        {
+            await TelegramStatusChecker.SendMessageToAdminAsync("Сервис останавливается");
+        }
+        /*
         public override Task StartAsync(CancellationToken cancellationToken)
         {
             return base.StartAsync(cancellationToken);

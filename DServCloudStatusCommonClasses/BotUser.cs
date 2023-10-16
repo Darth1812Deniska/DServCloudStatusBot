@@ -6,12 +6,36 @@ using System.Threading.Tasks;
 
 namespace DServCloudStatusCommonClasses
 {
+    [Serializable]
     public class BotUser
     {
-        public int Id { get; set; }
+        public long Id { get; set; }
         public string Name { get; set; }
-        public int ChatId { get; set; }
+        public long ChatId { get; set; }
         public bool IsAdmin { get; set; }
-        public BotUser() { }
+
+        public BotUser()
+        {
+        }
+
+        public override string ToString()
+        {
+            return $"{Id} - {Name}";
+        }
+
+        public bool Equals(BotUser other)
+        {
+            return this.Name == other.Name;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            if (obj is BotUser otherBotUser)
+            {
+                return Equals(otherBotUser);
+            }
+
+            return false;
+        }
     }
 }

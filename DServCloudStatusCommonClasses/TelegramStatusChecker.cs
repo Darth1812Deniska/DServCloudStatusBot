@@ -40,7 +40,7 @@ namespace DServCloudStatusCommonClasses
             _portsToCheck = BotSettings.PortsToCheck;
             string.Join(",", PortsToCheck);
             Logger.Info($"Указаны следующие порты для проверки: PortsToCheck = \"{string.Join(",", PortsToCheck)}\"");
-
+            BotUsers.LoadUsers();
             _telegramBotClient = new TelegramBotClient(BotSettings.BotToken);
             var cts = new CancellationTokenSource();
             var cancellationToken = cts.Token;
@@ -58,8 +58,7 @@ namespace DServCloudStatusCommonClasses
             CancellationToken cancellationToken
         )
         {
-            // Данный Хендлер получает ошибки и выводит их в консоль в виде JSON
-            Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(exception));
+            Logger.Error($"HandleErrorAsync. {exception.Message}; {exception}");
         }
 
         private async Task HandleUpdateAsync(
@@ -76,9 +75,24 @@ namespace DServCloudStatusCommonClasses
                     return;
                 Chat chat = message.Chat;
                 User? fromUser = message.From;
-                if (fromUser == null) return;
+                if (fromUser == null) 
+                    return;
                 long userId = fromUser.Id;
                 string? username = fromUser.Username;
+
+                if (!BotUsers.IsUserExists(username))
+                {
+                    if (BotSettings.AdminUserName == username)
+                    {
+                        BotUsers.AddAdminUser(userId, username, chat.Id);
+                    }
+                    else
+                    {
+                        await SendMessageToAdminAsync($"Прислано сообщение от нового пользователя \"{username}\"");
+                        BotUsers.AddUser(userId, username, chat.Id, false);
+                    }
+                }
+
                 Logger.Info(
                     $"Новое сообщение в чате chatID = {chat.Id} от пользователя \"{username}\" (userID = {userId})");
                 if (message.Text != null)
@@ -144,7 +158,7 @@ namespace DServCloudStatusCommonClasses
             }
 
             string username = user.Username;
-            if (username != AdminUserName)
+            if (username != AdminUserName && !BotUsers.IsUserAdmin(username))
             {
                 Logger.Info($"ServerRestartAsync. Перезапуск запрошен не администратором - не перезапускается");
                 return;
@@ -160,6 +174,7 @@ namespace DServCloudStatusCommonClasses
         private async Task ServerRestartConfirmAsync(Message message)
         {
             Chat chat = message.Chat;
+
             Logger.Info($"ServerRestartConfirm. Перезапуск подтвержден администратором");
             await TelegramBotClient.SendTextMessageAsync(chat.Id, "Перезапуск подтвержден администратором");
             Restart();
@@ -183,7 +198,7 @@ namespace DServCloudStatusCommonClasses
         private async Task ServerRestartCancelAsync(Message message)
         {
             Chat chat = message.Chat;
-            Logger.Info($"ServerRestartConfirm. отменен администратором");
+            Logger.Info($"ServerRestartConfirm. Перезапуск отменен администратором");
             await TelegramBotClient.SendTextMessageAsync(chat.Id, "Перезапуск отменен администратором");
         }
 
@@ -195,10 +210,33 @@ namespace DServCloudStatusCommonClasses
         {
         }
 
+        public async Task SendMessageToAdminAsync(string messageText)
+        {
+            if (string.IsNullOrEmpty(messageText.Trim()))
+            {
+                Logger.Error("SendMessageToAdminAsync. Попытка отправки пустого сообщения");
+                return;
+            }
+
+            if (BotUsers.AdminUsersList.Count == 0)
+            {
+                Logger.Error("SendMessageToAdminAsync. Не указаны администраторы для получения сообщения");
+                return;
+            }
+
+            foreach (var adminUser in BotUsers.AdminUsersList)
+            {
+                var chatID = adminUser.ChatId;
+                var adminName =adminUser.Name;
+                await TelegramBotClient.SendTextMessageAsync(chatID, messageText);
+                Logger.Info($"SendMessageToAdminAsync. Отправлено админу \"{adminName}\" в чат {chatID} сообщение: \"{messageText}\"");
+            }
+        }
+
         private async Task SendIpStatusAsync(Chat chat, string? username)
         {
             Logger.Info($"SendIpStatusAsync. Запрошена проверка портов");
-            if (username != AdminUserName)
+            if (username != AdminUserName && BotUsers.IsUserAdmin(username))
             {
                 Logger.Info($"SendIpStatusAsync. Проверку запросил не админ. Отмена");
                 return;
@@ -222,20 +260,6 @@ namespace DServCloudStatusCommonClasses
                         $"{ServerIpAddressString}:{port} - недоступен");
                 }
             }
-
-            /*Ping pingSender = new Ping();
-
-            IPAddress serverIpAddress = IPAddress.Parse(ServerIpAddressString);
-            PingReply reply = pingSender.Send(serverIpAddress);
-            if (reply.Status == IPStatus.Success)
-            {
-                Console.WriteLine("IP {0} is reachable", reply.Address);
-            }
-            else
-            {
-                Console.WriteLine("IP {0} is not reachable, error: {2}", reply.Address, reply.Status);
-            }
-            */
         }
 
         private bool PingHost(string hostUri, int portNumber)
