@@ -1,13 +1,8 @@
-﻿using System;
-using System.Net.NetworkInformation;
-using System.Net;
-using NLog;
+﻿using NLog;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using System.Net.Sockets;
-using System.Linq;
 using System.Diagnostics;
 
 namespace DServCloudStatusCommonClasses
@@ -58,7 +53,18 @@ namespace DServCloudStatusCommonClasses
             CancellationToken cancellationToken
         )
         {
-            Logger.Error($"HandleErrorAsync. {exception.Message}; {exception}");
+            string exType = exception.GetType().ToString();
+            
+            switch (exType)
+            {
+                case "Telegram.Bot.Exceptions.RequestException":
+                    Logger.Error($"HandleErrorAsync. {exception.Message}");
+                    break;
+                default:
+                    Logger.Error($"HandleErrorAsync. {exception.Message}; {exception}");
+                    break;
+            }
+            
         }
 
         private async Task HandleUpdateAsync(
@@ -247,7 +253,7 @@ namespace DServCloudStatusCommonClasses
             foreach (var port in PortsToCheck)
             {
                 Logger.Info($"SendIpStatusAsync. Выполняется проверка {ServerIpAddressString}:{port}");
-                bool isPing = PingHost(ServerIpAddressString, port);
+                bool isPing = StaticMethods.PingHost(ServerIpAddressString, port);
                 if (isPing)
                 {
                     Logger.Info($"SendIpStatusAsync. {ServerIpAddressString}:{port} - доступен");
@@ -262,18 +268,6 @@ namespace DServCloudStatusCommonClasses
             }
         }
 
-        private bool PingHost(string hostUri, int portNumber)
-        {
-            try
-            {
-                using (var client = new TcpClient(hostUri, portNumber))
-                    return true;
-            }
-            catch (SocketException ex)
-            {
-                Logger.Error($"PingHost. {ex.Message}");
-                return false;
-            }
-        }
+        
     }
 }
