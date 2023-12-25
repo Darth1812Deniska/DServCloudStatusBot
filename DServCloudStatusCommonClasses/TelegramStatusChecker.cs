@@ -9,21 +9,30 @@ namespace DServCloudStatusCommonClasses
 {
     public class TelegramStatusChecker
     {
+        #region Fields
+
         private readonly TelegramBotClient _telegramBotClient;
+
         private readonly string _adminUserName;
         private readonly string _serverIpAddressString;
         private readonly int[] _portsToCheck;
         private readonly BotSettings _botSettings;
+
+        #endregion
+
+        #region Properties
+
         private TelegramBotClient TelegramBotClient => _telegramBotClient;
         private Logger Logger => LogManager.GetCurrentClassLogger();
 
         private BotSettings BotSettings => _botSettings;
-
         private string AdminUserName => _adminUserName;
-
         private string ServerIpAddressString => _serverIpAddressString;
-
         private int[] PortsToCheck => _portsToCheck;
+
+        #endregion
+
+        #region Constructor
 
         public TelegramStatusChecker(BotSettings botSettings)
         {
@@ -46,6 +55,37 @@ namespace DServCloudStatusCommonClasses
              _telegramBotClient.StartReceiving(HandleUpdateAsync, HandleErrorAsync, receiverOptions, cancellationToken);
             Logger.Info("Бот запущен!");
         }
+
+        #endregion
+
+        #region Public methods
+
+        public async Task SendMessageToAdminAsync(string messageText)
+        {
+            if (string.IsNullOrEmpty(messageText.Trim()))
+            {
+                Logger.Error("SendMessageToAdminAsync. Попытка отправки пустого сообщения");
+                return;
+            }
+
+            if (BotUsers.AdminUsersList.Count == 0)
+            {
+                Logger.Error("SendMessageToAdminAsync. Не указаны администраторы для получения сообщения");
+                return;
+            }
+
+            foreach (var adminUser in BotUsers.AdminUsersList)
+            {
+                var chatID = adminUser.ChatId;
+                var adminName =adminUser.Name;
+                await TelegramBotClient.SendTextMessageAsync(chatID, messageText);
+                Logger.Info($"SendMessageToAdminAsync. Отправлено админу \"{adminName}\" в чат {chatID} сообщение: \"{messageText}\"");
+            }
+        }
+
+        #endregion
+
+        #region Private methods
 
         private async Task HandleErrorAsync(
             ITelegramBotClient botClient,
@@ -216,29 +256,6 @@ namespace DServCloudStatusCommonClasses
         {
         }
 
-        public async Task SendMessageToAdminAsync(string messageText)
-        {
-            if (string.IsNullOrEmpty(messageText.Trim()))
-            {
-                Logger.Error("SendMessageToAdminAsync. Попытка отправки пустого сообщения");
-                return;
-            }
-
-            if (BotUsers.AdminUsersList.Count == 0)
-            {
-                Logger.Error("SendMessageToAdminAsync. Не указаны администраторы для получения сообщения");
-                return;
-            }
-
-            foreach (var adminUser in BotUsers.AdminUsersList)
-            {
-                var chatID = adminUser.ChatId;
-                var adminName =adminUser.Name;
-                await TelegramBotClient.SendTextMessageAsync(chatID, messageText);
-                Logger.Info($"SendMessageToAdminAsync. Отправлено админу \"{adminName}\" в чат {chatID} сообщение: \"{messageText}\"");
-            }
-        }
-
         private async Task SendIpStatusAsync(Chat chat, string? username)
         {
             Logger.Info($"SendIpStatusAsync. Запрошена проверка портов");
@@ -268,6 +285,6 @@ namespace DServCloudStatusCommonClasses
             }
         }
 
-        
+        #endregion
     }
 }
